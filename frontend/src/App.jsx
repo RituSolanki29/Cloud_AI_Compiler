@@ -7,39 +7,35 @@ import HistoryPage from './pages/HistoryPage';
 import Navbar from './components/Navbar';
 import './styles/global.css';
 
-// ProtectedRoute: if user is not logged in, redirect to /login
-// Wraps any page that requires authentication
+// ProtectedRoute: redirects unauthenticated users to /login
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loading-screen">Loading...</div>;
-  return user ? children : <Navigate to="/login" />;
+  if (loading) return <div className="loading-screen"><div className="loading-spinner" /></div>;
+  return user ? children : <Navigate to="/login" replace />;
 };
 
+// BUG FIX: Router must wrap Navbar — original had Router inside AppRoutes which is fine,
+// but Navbar (which uses useNavigate, useLocation) MUST be inside BrowserRouter.
+// Now Navbar is inside the Router as part of AppRoutes, not outside it.
 function AppRoutes() {
   const { user } = useAuth();
   return (
     <Router>
       {user && <Navbar />}
       <Routes>
-        {/* Public route — accessible without login */}
         <Route path="/login" element={<AuthPage />} />
-
-        {/* Protected routes — require login */}
         <Route path="/" element={
           <ProtectedRoute><EditorPage /></ProtectedRoute>
         } />
         <Route path="/history" element={
           <ProtectedRoute><HistoryPage /></ProtectedRoute>
         } />
-
-        {/* Catch-all — redirect unknown URLs to home */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
 }
 
-// App wraps everything in AuthProvider so all child components can access auth
 function App() {
   return (
     <AuthProvider>

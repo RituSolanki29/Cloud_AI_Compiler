@@ -1,41 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/CodeEditor';
 import OutputPanel from '../components/OutputPanel';
 import { executeCode, explainError, analyzeCode } from '../api/services';
-import '../styles/EditorPage.css';
+import './EditorPage.css';
 
-// EditorPage — the main workspace of the app
-// This page:
-//   1. Holds all state: code, language, output, AI results
-//   2. Renders CodeEditor (left) and OutputPanel (right) side by side
-//   3. Handles all API calls: execute, explain, analyze
+const DEFAULT_CODE = {
+  python: `# Write your Python code here\ndef main():\n    print("Hello from SmartCloud!")\n\nmain()`,
+  java: `// Write your Java code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from SmartCloud!");\n    }\n}`,
+  cpp: `// Write your C++ code here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from SmartCloud!" << endl;\n    return 0;\n}`,
+};
+
 const EditorPage = () => {
-  // Code state
-  const [language, setLanguage] = useState('python');
-  const [code, setCode] = useState(`# Write your Python code here\ndef main():\n    print("Hello from SmartCloud!")\n\nmain()`);
-  const [stdin, setStdin] = useState(''); // optional user input for the program
+  const location = useLocation();
 
-  // Output state
-  const [output, setOutput] = useState(null);      // execution result from backend
-  const [aiExplain, setAiExplain] = useState('');  // AI error explanation
-  const [aiAnalysis, setAiAnalysis] = useState('');// AI code analysis
+  // BUG FIX: Read location.state so "Re-open in editor" from HistoryPage actually works
+  const [language, setLanguage] = useState(location.state?.language || 'python');
+  const [code, setCode] = useState(location.state?.code || DEFAULT_CODE.python);
+  const [stdin, setStdin] = useState(location.state?.input || '');
 
-  // Loading states — controls spinners and disabled buttons
+  // Sync code template when language changes (only if not reopening from history)
+  const [wasReopened, setWasReopened] = useState(!!location.state?.code);
+
+  const [output, setOutput] = useState(null);
+  const [aiExplain, setAiExplain] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
-  // ── RUN CODE ──────────────────────────────────────────────
-  // Called when user clicks ▶ Run Code
-  // Sends code to backend → backend spins up Docker container → returns output
+  // When location.state changes (user navigates from history), update editor
+  useEffect(() => {
+    if (location.state?.code) {
+      setCode(location.state.code);
+      setLanguage(location.state.language || 'python');
+      setStdin(location.state.input || '');
+      setOutput(null);
+      setAiExplain('');
+      setAiAnalysis('');
+      setWasReopened(true);
+    }
+  }, [location.state]);
+
+  const handleLanguageChange = (newLang) => {
+    setLanguage(newLang);
+    if (!wasReopened) {
+      setCode(DEFAULT_CODE[newLang]);
+    }
+    setWasReopened(false);
+  };
+
   const handleRun = async () => {
     setIsRunning(true);
-    setOutput(null);        // clear previous output
-    setAiExplain('');       // clear previous AI results
+    setOutput(null);
+    setAiExplain('');
     setAiAnalysis('');
 
     try {
       const response = await executeCode({ language, code, input: stdin });
-      setOutput(response.data);  // { stdout, stderr, executionTime, status }
+      setOutput(response.data);
     } catch (err) {
       setOutput({
         status: 'ERROR',
@@ -48,35 +70,25 @@ const EditorPage = () => {
     }
   };
 
-  // ── AI EXPLAIN ────────────────────────────────────────────
-  // Called when user clicks "Explain this error with AI"
-  // Sends the code + error to OpenAI via our backend
   const handleExplain = async () => {
     if (!output?.stderr) return;
     setIsAILoading(true);
     try {
-      const response = await explainError({
-        language,
-        code,
-        error: output.stderr,
-      });
+      const response = await explainError({ language, code, error: output.stderr });
       setAiExplain(response.data.explanation);
-    } catch (err) {
+    } catch {
       setAiExplain('AI service unavailable. Please try again later.');
     } finally {
       setIsAILoading(false);
     }
   };
 
-  // ── AI ANALYZE ────────────────────────────────────────────
-  // Called when user clicks "Analyze Code Complexity"
-  // Sends code to OpenAI for Big-O analysis and optimization tips
   const handleAnalyze = async () => {
     setIsAILoading(true);
     try {
       const response = await analyzeCode({ language, code });
       setAiAnalysis(response.data.analysis);
-    } catch (err) {
+    } catch {
       setAiAnalysis('AI service unavailable. Please try again later.');
     } finally {
       setIsAILoading(false);
@@ -85,32 +97,38 @@ const EditorPage = () => {
 
   return (
     <div className="editor-page">
-      {/* Left panel — code editor */}
-      <div className="editor-section">
+      {/* Left: code editor + stdin */}
+      <div className="editor-pane">
         <CodeEditor
           code={code}
           setCode={setCode}
           language={language}
-          setLanguage={setLanguage}
+          setLanguage={handleLanguageChange}
           onRun={handleRun}
           isLoading={isRunning}
         />
 
-        {/* Optional stdin input — for programs that read user input */}
-        <div className="stdin-section">
-          <label className="stdin-label">📥 Program Input (stdin):</label>
+        <div className="stdin-panel">
+          <div className="stdin-header">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M1 6h10M6 1l5 5-5 5" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>stdin</span>
+            <span className="stdin-hint">Program input (optional)</span>
+          </div>
           <textarea
-            className="stdin-input"
+            className="stdin-textarea"
             value={stdin}
             onChange={(e) => setStdin(e.target.value)}
-            placeholder="Enter input for your program here (optional)..."
+            placeholder="Enter input for your program..."
             rows={3}
+            spellCheck={false}
           />
         </div>
       </div>
 
-      {/* Right panel — output + AI results */}
-      <div className="output-section">
+      {/* Right: output + AI */}
+      <div className="output-pane">
         <OutputPanel
           output={output}
           aiExplain={aiExplain}

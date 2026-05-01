@@ -1,96 +1,103 @@
 import React, { useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import '../styles/CodeEditor.css';
+import './CodeEditor.css';
 
-// Language configs — maps our language names to Monaco's syntax highlighting IDs
-// and provides starter template code for each language
 const LANGUAGE_CONFIG = {
-  python: {
-    monacoLang: 'python',
-    template: `# Write your Python code here\ndef main():\n    print("Hello from SmartCloud!")\n\nmain()`,
-  },
-  java: {
-    monacoLang: 'java',
-    template: `// Write your Java code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from SmartCloud!");\n    }\n}`,
-  },
-  cpp: {
-    monacoLang: 'cpp',
-    template: `// Write your C++ code here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from SmartCloud!" << endl;\n    return 0;\n}`,
-  },
+  python: { monacoLang: 'python', label: 'Python', emoji: '🐍' },
+  java:   { monacoLang: 'java',   label: 'Java',   emoji: '☕' },
+  cpp:    { monacoLang: 'cpp',    label: 'C++',    emoji: '⚙️' },
 };
 
 // CodeEditor component
-// Props:
-//   code          — current code string (controlled by parent)
-//   setCode       — updates code in parent state
-//   language      — 'python' | 'java' | 'cpp'
-//   setLanguage   — updates language in parent
-//   onRun         — function called when Run button is clicked
-//   isLoading     — disables Run button while code is executing
+// Props: code, setCode, language, setLanguage, onRun, isLoading
 const CodeEditor = ({ code, setCode, language, setLanguage, onRun, isLoading }) => {
   const editorRef = useRef(null);
 
-  // Called once Monaco editor mounts — stores reference for future operations
-  const handleEditorMount = (editor) => {
+  const handleEditorMount = (editor, monaco) => {
     editorRef.current = editor;
     editor.focus();
+
+    // Custom keyboard shortcut: Ctrl+Enter = Run
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, onRun);
   };
 
-  // When language changes, swap in the starter template for that language
-  const handleLanguageChange = (e) => {
-    const newLang = e.target.value;
+  const handleLanguageChange = (newLang) => {
     setLanguage(newLang);
-    setCode(LANGUAGE_CONFIG[newLang].template);
   };
 
   return (
     <div className="editor-container">
-      {/* Toolbar: language selector + run button */}
+      {/* Toolbar */}
       <div className="editor-toolbar">
         <div className="toolbar-left">
-          <label className="toolbar-label">Language:</label>
-          <select
-            className="language-select"
-            value={language}
-            onChange={handleLanguageChange}
-          >
-            <option value="python">🐍 Python</option>
-            <option value="java">☕ Java</option>
-            <option value="cpp">⚙️ C++</option>
-          </select>
+          <div className="lang-pills">
+            {Object.entries(LANGUAGE_CONFIG).map(([key, cfg]) => (
+              <button
+                key={key}
+                className={`lang-pill ${language === key ? 'active' : ''}`}
+                onClick={() => handleLanguageChange(key)}
+              >
+                <span>{cfg.emoji}</span>
+                {cfg.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="toolbar-right">
+          <span className="shortcut-hint">⌘↵ to run</span>
           <button
-            className={`run-btn ${isLoading ? 'loading' : ''}`}
+            className={`run-btn ${isLoading ? 'running' : ''}`}
             onClick={onRun}
             disabled={isLoading}
           >
-            {isLoading ? '⏳ Running...' : '▶ Run Code'}
+            {isLoading ? (
+              <>
+                <span className="run-spinner" />
+                Running...
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 2l7 4-7 4V2z" fill="currentColor"/>
+                </svg>
+                Run Code
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Monaco Editor — the actual code editing area */}
-      {/* It gives us VS Code-like features: syntax highlight, autocomplete, line numbers */}
-      <Editor
-        height="65vh"
-        language={LANGUAGE_CONFIG[language].monacoLang}
-        value={code}
-        onChange={(value) => setCode(value || '')}
-        onMount={handleEditorMount}
-        theme="vs-dark"
-        options={{
-          fontSize: 14,
-          fontFamily: 'JetBrains Mono, Fira Code, monospace',
-          minimap: { enabled: false },  // hide the minimap for cleaner UI
-          scrollBeyondLastLine: false,
-          lineNumbers: 'on',
-          automaticLayout: true,       // resize when container changes
-          tabSize: 2,
-          wordWrap: 'on',
-        }}
-      />
+      {/* Monaco Editor */}
+      <div className="editor-wrap">
+        <Editor
+          height="100%"
+          language={LANGUAGE_CONFIG[language].monacoLang}
+          value={code}
+          onChange={(value) => setCode(value || '')}
+          onMount={handleEditorMount}
+          theme="vs-dark"
+          options={{
+            fontSize: 13,
+            fontFamily: '"Space Mono", "Fira Code", "Cascadia Code", monospace',
+            fontLigatures: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            lineNumbers: 'on',
+            automaticLayout: true,
+            tabSize: 2,
+            wordWrap: 'on',
+            padding: { top: 16, bottom: 16 },
+            renderLineHighlight: 'gutter',
+            cursorBlinking: 'phase',
+            smoothScrolling: true,
+            lineDecorationsWidth: 8,
+            glyphMargin: false,
+            folding: true,
+            bracketPairColorization: { enabled: true },
+          }}
+        />
+      </div>
     </div>
   );
 };

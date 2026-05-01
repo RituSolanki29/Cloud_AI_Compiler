@@ -1,26 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { loginUser, registerUser } from '../api/services';
 
-// Create a context — this is like a global state store for auth
 const AuthContext = createContext(null);
 
-// AuthProvider wraps the entire app so any component can access auth state
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);       // Current logged-in user object
-  const [loading, setLoading] = useState(true); // True while checking localStorage
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // On app load, check if a token already exists in localStorage
-  // This keeps the user logged in after page refresh
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
-  // login: calls API, saves token + user to localStorage, updates state
   const login = async (credentials) => {
     const response = await loginUser(credentials);
     const { token, user: userData } = response.data;
@@ -30,13 +30,17 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
-  // register: calls API then auto-logs in
+  // BUG FIX: Register now returns token directly from backend — no need to call loginUser again
+  // The old code called registerUser() then loginUser() (2 round trips), now it's 1
   const register = async (userData) => {
-    await registerUser(userData);
-    return login({ username: userData.username, password: userData.password });
+    const response = await registerUser(userData);
+    const { token, user: newUser } = response.data;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(newUser);
+    return newUser;
   };
 
-  // logout: wipes localStorage and resets state
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -50,7 +54,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook — any component can do: const { user, login } = useAuth();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used inside AuthProvider');

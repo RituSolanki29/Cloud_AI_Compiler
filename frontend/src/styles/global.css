@@ -1,97 +1,98 @@
-/* global.css — base styles, CSS variables, resets */
-/* Theme: dark terminal aesthetic — fits a code execution platform */
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap');
-
-/* ── CSS Variables ── */
 :root {
-  --bg-primary: #0d0f14;       /* deep dark background */
-  --bg-secondary: #151820;     /* slightly lighter panels */
-  --bg-card: #1a1d27;          /* card backgrounds */
-  --bg-hover: #1f2333;
+  /* Core palette — deep space dark with electric accents */
+  --bg-0: #080b12;
+  --bg-1: #0e1420;
+  --bg-2: #141b2d;
+  --bg-3: #1a2240;
 
-  --accent: #00d4ff;           /* electric cyan — the brand color */
-  --accent-dim: #0099bb;
-  --accent-glow: rgba(0, 212, 255, 0.15);
+  --border: rgba(99, 179, 237, 0.12);
+  --border-bright: rgba(99, 179, 237, 0.28);
 
-  --success: #00e676;          /* green for success */
-  --error: #ff5252;            /* red for errors */
-  --warning: #ffd740;          /* yellow for warnings */
+  --accent: #38bdf8;
+  --accent-dim: rgba(56, 189, 248, 0.15);
+  --accent-glow: rgba(56, 189, 248, 0.4);
 
-  --text-primary: #e8eaf0;
-  --text-secondary: #8891a8;
-  --text-muted: #555c72;
+  --green: #34d399;
+  --green-dim: rgba(52, 211, 153, 0.15);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.15);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251, 191, 36, 0.15);
+  --purple: #a78bfa;
+  --purple-dim: rgba(167, 139, 250, 0.15);
 
-  --border: #252a3a;
-  --border-accent: rgba(0, 212, 255, 0.3);
+  --text-0: #f0f6ff;
+  --text-1: #94a3b8;
+  --text-2: #64748b;
 
-  --radius: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
 
-  --font-code: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-ui: 'Syne', sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.6);
+
+  --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Reset ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html, body {
+html, body, #root {
   height: 100%;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-ui);
-  font-size: 14px;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--bg-0);
+  color: var(--text-0);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-#root { height: 100%; display: flex; flex-direction: column; }
-
-/* ── Scrollbar ── */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
 
-/* ── Loading Screen ── */
+/* Loading screen */
 .loading-screen {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100vh;
-  font-family: var(--font-code);
-  color: var(--accent);
-  font-size: 18px;
-  letter-spacing: 2px;
+  background: var(--bg-0);
 }
 
-/* ── Spinner ── */
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border);
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--bg-3);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin: 0 auto 12px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Button base ── */
-button { cursor: pointer; border: none; font-family: var(--font-ui); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ── Input base ── */
-input, textarea, select {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  font-family: var(--font-ui);
-  padding: 8px 12px;
-  transition: border-color 0.2s;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+
+/* Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
 }

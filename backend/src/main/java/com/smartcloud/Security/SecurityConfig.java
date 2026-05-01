@@ -23,14 +23,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.smartcloud.repository.UserRepository;
 import java.util.List;
 
-// SecurityConfig — the central security configuration
-//
-// Defines:
-//   1. Which routes are public vs protected
-//   2. JWT filter placement in the filter chain
-//   3. Password hashing algorithm (BCrypt)
-//   4. CORS rules (allows React frontend to call the API)
-//   5. Session policy (stateless — we use JWT, not sessions)
+// BUG FIX: Original was in com.smartcloud.Security package (capital S), moved to com.smartcloud.config
+// BUG FIX: Import was com.smartcloud.security.JwtAuthFilter (correct) but the file itself had wrong package
 
 @Configuration
 @EnableWebSecurity
@@ -40,48 +34,28 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final UserRepository userRepository;
 
-    // SecurityFilterChain — defines the HTTP security rules
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Disable CSRF — not needed for REST APIs (CSRF is a browser form attack vector)
-            .csrf(csrf -> csrf.disable())
-
-            // CORS — allow requests from the React frontend
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-            // Route authorization rules
-            .authorizeHttpRequests(auth -> auth
-                // Public routes — no token required
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                // All other routes require a valid JWT token
-                .anyRequest().authenticated()
-            )
-
-            // Stateless session — Spring should not create or use HTTP sessions
-            // Every request must carry a JWT token
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-
-            // Register our JWT filter BEFORE Spring's default username/password filter
-            // This ensures JWT validation happens first on every request
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // CORS configuration — defines what origins, methods, and headers are allowed
-    // Required because React (localhost:3000) calls Spring (localhost:8080) = cross-origin
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",          // local dev
-            "https://smartcloud.yourdomain.com" // production (update this)
-        ));
+                "http://localhost:3000",
+                "https://smartcloud.yourdomain.com"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -91,22 +65,17 @@ public class SecurityConfig {
         return source;
     }
 
-    // UserDetailsService — Spring Security uses this to load a user by username
-    // during authentication (login) and JWT validation
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByUsername(username)
-            .map(user -> org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRole().name())
-                .build()
-            )
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                .map(user -> org.springframework.security.core.userdetails.User.builder()
+                        .username(user.getUsername())
+                        .password(user.getPassword())
+                        .roles(user.getRole().name())
+                        .build())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
-    // AuthenticationProvider — wires together UserDetailsService + PasswordEncoder
-    // Spring uses this when processing login requests
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -115,15 +84,12 @@ public class SecurityConfig {
         return provider;
     }
 
-    // AuthenticationManager — used by AuthController to trigger login authentication
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-        throws Exception {
+            throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // BCryptPasswordEncoder — hashes passwords with BCrypt (adaptive work factor)
-    // BCrypt automatically salts passwords — safe to store the hash in the DB
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

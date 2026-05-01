@@ -25,7 +25,8 @@ public class AuthController {
     private final AuthService authService;
 
     // POST /api/auth/register
-    // @Valid triggers validation on the RegisterRequest fields (@NotBlank, @Email, etc.)
+    // @Valid triggers validation on the RegisterRequest fields (@NotBlank, @Email,
+    // etc.)
     // Returns 200 OK with the AuthResponse (JWT token + user info)
     // Returns 400 Bad Request if validation fails or username/email already taken
     @PostMapping("/register")
