@@ -1,0 +1,66 @@
+/* AuthPage.css */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  /* subtle grid background */
+  background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+.auth-header { text-align: center; margin-bottom: 28px; }
+.auth-logo { font-size: 40px; display: block; margin-bottom: 10px; }
+.auth-title { font-size: 22px; font-weight: 800; color: var(--accent); }
+.auth-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.auth-tabs { display: flex; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.auth-tab.active { background: var(--accent); color: #000; }
+
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+.form-group input { width: 100%; font-size: 14px; }
+
+.auth-error {
+  background: rgba(255,82,82,0.12);
+  border: 1px solid rgba(255,82,82,0.3);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  color: var(--error);
+  font-size: 13px;
+}
+
+.auth-submit {
+  padding: 12px;
+  background: var(--accent);
+  color: #000;
+  border-radius: var(--radius);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.auth-submit:hover:not(:disabled) { background: #33ddff; box-shadow: 0 0 24px var(--accent-glow); }
