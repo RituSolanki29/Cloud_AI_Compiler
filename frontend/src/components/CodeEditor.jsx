@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import './CodeEditor.css';
+import "../styles/CodeEditor.css";
 
 const LANGUAGE_CONFIG = {
   python: { monacoLang: 'python', label: 'Python', emoji: '🐍' },

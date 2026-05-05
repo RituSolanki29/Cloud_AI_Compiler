@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/CodeEditor';
 import OutputPanel from '../components/OutputPanel';
 import { executeCode, explainError, analyzeCode } from '../api/services';
-import './EditorPage.css';
+import '../styles/EditorPage.css';
 
 const DEFAULT_CODE = {
   python: `# Write your Python code here\ndef main():\n    print("Hello from SmartCloud!")\n\nmain()`,

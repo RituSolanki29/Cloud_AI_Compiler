@@ -2,8 +2,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
   height: 52px;
+  padding: 0 20px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -12,20 +12,28 @@
   backdrop-filter: blur(12px);
 }
 
+/* Brand */
 .navbar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  text-decoration: none;
 }
 
 .brand-mark {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-sm);
 }
 
 .brand-name {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 15px;
   color: var(--text-0);
   letter-spacing: -0.3px;
@@ -33,16 +41,17 @@
 
 .brand-tag {
   font-size: 10px;
-  font-weight: 700;
   color: var(--accent);
   background: var(--accent-dim);
   border: 1px solid rgba(56, 189, 248, 0.2);
-  padding: 2px 7px;
-  border-radius: 20px;
+  border-radius: 4px;
+  padding: 2px 6px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  font-weight: 700;
 }
 
+/* Center nav links */
 .navbar-center {
   display: flex;
   align-items: center;
@@ -52,13 +61,13 @@
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 14px;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   color: var(--text-1);
   text-decoration: none;
   font-size: 13px;
-  font-weight: 400;
-  border-radius: var(--radius-sm);
+  font-weight: 500;
   transition: color var(--transition), background var(--transition);
 }
 
@@ -72,6 +81,7 @@
   background: var(--accent-dim);
 }
 
+/* User section */
 .navbar-user {
   display: flex;
   align-items: center;
@@ -82,7 +92,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px 4px 4px;
+  padding: 4px 10px 4px 4px;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -93,7 +103,7 @@
   height: 24px;
   border-radius: 50%;
   background: var(--accent-dim);
-  border: 1px solid var(--border-bright);
+  border: 1px solid var(--accent);
   color: var(--accent);
   font-size: 11px;
   font-weight: 700;
@@ -104,7 +114,8 @@
 
 .username {
   font-size: 12px;
-  color: var(--text-1);
+  color: var(--text-0);
+  font-weight: 500;
 }
 
 .logout-btn {
@@ -115,15 +126,15 @@
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text-2);
+  color: var(--text-1);
   font-size: 12px;
-  font-family: var(--font-mono);
   cursor: pointer;
   transition: all var(--transition);
+  font-family: var(--font-mono);
 }
 
 .logout-btn:hover {
-  border-color: var(--red);
   color: var(--red);
+  border-color: rgba(248, 113, 113, 0.3);
   background: var(--red-dim);
 }

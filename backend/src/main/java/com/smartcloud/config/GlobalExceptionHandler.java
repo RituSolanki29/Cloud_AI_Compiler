@@ -11,8 +11,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.*;
 
-// BUG FIX: File was in service/ folder but had package com.smartcloud.config — moved to config/
-
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
@@ -66,3 +64,6 @@ public class GlobalExceptionHandler {
                 "timestamp", LocalDateTime.now().toString()));
     }
 }
+
+
+//mvn spring-boot:run

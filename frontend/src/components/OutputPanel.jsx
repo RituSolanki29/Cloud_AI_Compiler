@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './OutputPanel.css';
+import '../styles/OutputPanel.css';
 
 // OutputPanel displays: execution results, AI error explanation, AI code analysis
 const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAILoading }) => {

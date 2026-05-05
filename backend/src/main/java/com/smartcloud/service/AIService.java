@@ -1,6 +1,5 @@
 package com.smartcloud.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -10,7 +9,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AIService {
 
@@ -73,7 +71,24 @@ public class AIService {
         return callOpenAI(prompt);
     }
 
+    // Called once after Spring injects the @Value fields — catches missing/blank key early
+    @jakarta.annotation.PostConstruct
+    private void validateConfig() {
+        if (openAiKey == null || openAiKey.isBlank()) {
+            log.error("⚠️  openai.api.key is not set! AI features will not work. " +
+                      "Set it in application.properties or via the OPENAI_API_KEY env variable.");
+        } else {
+            log.info("✅ OpenAI key loaded (model: {})", model);
+        }
+    }
+
     private String callOpenAI(String userMessage) {
+        // Guard: fail fast with a clear message instead of a cryptic auth error
+        if (openAiKey == null || openAiKey.isBlank()) {
+            return "AI service is not configured. Please set the OpenAI API key in application.properties " +
+                   "(openai.api.key=sk-...) or via the OPENAI_API_KEY environment variable.";
+        }
+
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -102,6 +117,15 @@ public class AIService {
 
             return "AI service returned an unexpected response. Please try again.";
 
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            // Catches 401 Unauthorized (bad key), 429 Too Many Requests (quota), 400 bad model, etc.
+            log.error("OpenAI API HTTP error {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            if (e.getStatusCode().value() == 401) {
+                return "AI service error: Invalid API key. Please check your openai.api.key in application.properties.";
+            } else if (e.getStatusCode().value() == 429) {
+                return "AI service error: OpenAI rate limit or quota exceeded. Please check your billing at platform.openai.com.";
+            }
+            return "AI service error (" + e.getStatusCode() + "): " + e.getResponseBodyAsString();
         } catch (Exception e) {
             log.error("OpenAI API call failed: {}", e.getMessage());
             return "AI service is temporarily unavailable. Please try again later.";

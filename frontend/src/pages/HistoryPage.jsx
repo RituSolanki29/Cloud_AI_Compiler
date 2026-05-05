@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getHistory, deleteSubmission } from '../api/services';
-import './HistoryPage.css';
+import '../styles/HistoryPage.css';
 
 const LANG_CONFIG = {
   python: { emoji: '🐍', label: 'Python', color: 'var(--amber)' },

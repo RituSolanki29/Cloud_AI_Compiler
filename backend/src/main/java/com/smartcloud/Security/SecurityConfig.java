@@ -1,6 +1,5 @@
-package com.smartcloud.config;
+package com.smartcloud.security;
 
-import com.smartcloud.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +11,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,11 +18,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import com.smartcloud.repository.UserRepository;
 import java.util.List;
 
-// BUG FIX: Original was in com.smartcloud.Security package (capital S), moved to com.smartcloud.config
-// BUG FIX: Import was com.smartcloud.security.JwtAuthFilter (correct) but the file itself had wrong package
+// FIX: UserDetailsService is NO LONGER defined as a @Bean here.
+// It lives in UserDetailsServiceImpl (@Service) and is injected directly.
+// This breaks the circular dependency:
+//   BEFORE: JwtAuthFilter → UserDetailsService @Bean → SecurityConfig → JwtAuthFilter
+//   AFTER:  JwtAuthFilter → UserDetailsServiceImpl (standalone @Service, no cycle)
 
 @Configuration
 @EnableWebSecurity
@@ -32,7 +32,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final UserRepository userRepository;
+
+    // Injected from UserDetailsServiceImpl — a standalone @Service bean
+    // (NOT defined as a @Bean in this class, which caused the circular dependency)
+    private final UserDetailsService userDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -66,20 +69,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
-                .map(user -> org.springframework.security.core.userdetails.User.builder()
-                        .username(user.getUsername())
-                        .password(user.getPassword())
-                        .roles(user.getRole().name())
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-    }
-
-    @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService());
+        provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
