@@ -1,0 +1,100 @@
+# ─────────────────────────────────────────────────────────────
+#  SmartCloud — docker-compose.yml
+#
+#  Services:
+#    postgres  → local PostgreSQL (mirrors Amazon RDS for dev)
+#    backend   → Spring Boot app (port 8080)
+#    frontend  → React dev server (port 3000)
+#
+#  Runner images (python / java / cpp) are NOT services here.
+#  They are standalone images that the backend spawns on demand
+#  via ProcessBuilder ("docker run ...").
+#  Build them first with: docker compose -f docker-compose.yml build runners
+#  Or use the helper script: ./docker/build-runners.sh
+#
+#  Usage:
+#    1.  cp docker/.env.example docker/.env   ← fill in your secrets
+#    2.  docker compose up --build
+#    3.  Open http://localhost:3000
+# ─────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartcloud-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smartcloud
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-smartcloud_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: ../backend/backend          # path to your pom.xml folder
+      dockerfile: Dockerfile               # created below
+    container_name: smartcloud-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Database — points to the postgres service above
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/smartcloud
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-smartcloud_dev}
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-mySecretKey12345678901234567890123456789012}
+
+      # OpenAI
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # AWS (optional for dev)
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-smartcloud-outputs}
+
+    # ⚠️  CRITICAL: mount the Docker socket so the backend can spawn
+    #    runner containers (docker run smartcloud-runner-python ...)
+    #    Without this the backend cannot reach the host Docker daemon.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # ── React Frontend ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ../frontend/frontend        # path to your package.json folder
+      dockerfile: Dockerfile               # created below
+    container_name: smartcloud-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
+
+# ── Named Volumes ────────────────────────────────────────────
+volumes:
+  postgres_data:
+
+# ── Runner images as build-only targets ─────────────────────
+# These are not running services — they are built once and then
+# the backend spawns them on demand with "docker run".
+# Build them with:  docker compose -f docker-compose.runners.yml build
+

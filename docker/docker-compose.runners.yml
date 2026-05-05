@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────
+#  docker-compose.runners.yml
+#
+#  Builds the three sandboxed runner images that the backend
+#  spawns at runtime via "docker run".
+#
+#  Run once (or after changing a Dockerfile):
+#    docker compose -f docker/docker-compose.runners.yml build
+# ─────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  runner-python:
+    build:
+      context: ./runners/python
+    image: smartcloud-runner-python   # ← exact name used in CodeExecutionService.java
+
+  runner-java:
+    build:
+      context: ./runners/java
+    image: smartcloud-runner-java
+
+  runner-cpp:
+    build:
+      context: ./runners/cpp
+    image: smartcloud-runner-cpp
