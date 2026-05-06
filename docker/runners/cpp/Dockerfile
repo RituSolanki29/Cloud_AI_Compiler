@@ -8,7 +8,8 @@
 #    3. Runs /tmp/main
 # ─────────────────────────────────────────────────────────────
 
-FROM gcc:13-bookworm
+FROM alpine:3.19
+RUN apk add --no-cache g++
 
 USER nobody
 
