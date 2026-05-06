@@ -1,10 +1,6 @@
 # ─────────────────────────────────────────────────────────────
 #  SmartCloud — Frontend Dockerfile
 #  Place this at:  frontend/frontend/Dockerfile
-#
-#  Multi-stage build:
-#    Stage 1 (builder) — npm install + react-scripts build
-#    Stage 2 (runtime) — nginx serves the static build/
 # ─────────────────────────────────────────────────────────────
 
 # ── Stage 1: Build ───────────────────────────────────────────
@@ -12,24 +8,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files first for layer caching
-COPY package.json package-lock.json ./
-RUN npm ci --silent
+COPY package.json ./
+RUN npm install --silent
 
-# Copy source and build
 COPY . .
 RUN npm run build
 
 # ── Stage 2: Serve with nginx ─────────────────────────────────
 FROM nginx:alpine
 
-# Remove the default nginx welcome page
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the React build output
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# nginx config: redirect all routes to index.html (for React Router)
 RUN printf 'server {\n\
     listen 3000;\n\
     root /usr/share/nginx/html;\n\
@@ -37,7 +28,6 @@ RUN printf 'server {\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
     }\n\
-    # Proxy API calls to backend\n\
     location /api/ {\n\
         proxy_pass http://backend:8080;\n\
         proxy_set_header Host $host;\n\
