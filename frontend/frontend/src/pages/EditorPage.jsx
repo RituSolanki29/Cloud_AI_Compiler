@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/CodeEditor';
 import OutputPanel from '../components/OutputPanel';
@@ -14,23 +14,31 @@ const DEFAULT_CODE = {
 const EditorPage = () => {
   const location = useLocation();
 
-  // BUG FIX: Read location.state so "Re-open in editor" from HistoryPage actually works
-  const [language, setLanguage] = useState(location.state?.language || 'python');
-  const [code, setCode] = useState(location.state?.code || DEFAULT_CODE.python);
-  const [stdin, setStdin] = useState(location.state?.input || '');
+  // FIX: Use a ref to track which location.state we already applied.
+  // Without this, every re-render (including navigating BACK to this page
+  // without new state) would clear the editor back to defaults.
+  const appliedStateRef = useRef(null);
 
-  // Sync code template when language changes (only if not reopening from history)
+  const [language, setLanguage] = useState(location.state?.language || 'python');
+  const [code, setCode]         = useState(location.state?.code     || DEFAULT_CODE.python);
+  const [stdin, setStdin]       = useState(location.state?.input    || '');
   const [wasReopened, setWasReopened] = useState(!!location.state?.code);
 
-  const [output, setOutput] = useState(null);
-  const [aiExplain, setAiExplain] = useState('');
-  const [aiAnalysis, setAiAnalysis] = useState('');
-  const [isRunning, setIsRunning] = useState(false);
+  const [output,      setOutput]      = useState(null);
+  const [aiExplain,   setAiExplain]   = useState('');
+  const [aiAnalysis,  setAiAnalysis]  = useState('');
+  const [isRunning,   setIsRunning]   = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
-  // When location.state changes (user navigates from history), update editor
+  // Apply location.state ONLY when it actually changes (new navigation from History)
+  // Comparing by reference prevents wiping the editor when the user just clicks
+  // around on the same page without triggering a new navigate() call.
   useEffect(() => {
-    if (location.state?.code) {
+    if (
+      location.state?.code &&
+      location.state !== appliedStateRef.current
+    ) {
+      appliedStateRef.current = location.state;
       setCode(location.state.code);
       setLanguage(location.state.language || 'python');
       setStdin(location.state.input || '');

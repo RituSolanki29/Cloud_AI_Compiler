@@ -25,12 +25,16 @@ const AuthPage = () => {
     try {
       if (isLogin) {
         await login({ username: formData.username, password: formData.password });
+        navigate('/');
       } else {
         if (!formData.email) { setError('Email is required'); setLoading(false); return; }
-        // BUG FIX: register() now handles token storage directly — no second login call
         await register(formData);
+        // After signup — go to login page instead of auto-login
+        setIsLogin(true);
+        setFormData({ username: '', email: '', password: '' });
+        setError('');
+        alert('Account created! Please sign in.');
       }
-      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -40,14 +44,12 @@ const AuthPage = () => {
 
   return (
     <div className="auth-page">
-      {/* Background grid */}
       <div className="auth-bg">
         <div className="bg-grid" />
         <div className="bg-glow" />
       </div>
 
       <div className="auth-card">
-        {/* Logo */}
         <div className="auth-logo-wrap">
           <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
             <path d="M18 4L30 11V25L18 32L6 25V11L18 4Z" stroke="var(--accent)" strokeWidth="1.5" fill="none"/>
@@ -61,7 +63,6 @@ const AuthPage = () => {
           <p className="auth-subtitle">Cloud-native AI code execution platform</p>
         </div>
 
-        {/* Tab toggle */}
         <div className="auth-tabs">
           <button
             className={`auth-tab ${isLogin ? 'active' : ''}`}

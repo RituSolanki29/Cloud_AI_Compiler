@@ -24,19 +24,18 @@ public class Submission {
     @Column(nullable = false)
     private String language;
 
-    @Lob
+    // FIX: Removed @Lob — it causes "Large Objects may not be used in auto-commit
+    // mode"
+    // in PostgreSQL. columnDefinition = "TEXT" is sufficient for large strings.
     @Column(nullable = false, columnDefinition = "TEXT")
     private String code;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String input;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String stdout;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String stderr;
 

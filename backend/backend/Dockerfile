@@ -1,21 +1,10 @@
-# ─────────────────────────────────────────────────────────────
-#  SmartCloud — Backend Dockerfile
-#  Place this at:  backend/backend/Dockerfile
-# ─────────────────────────────────────────────────────────────
-
 # ── Stage 1: Build ───────────────────────────────────────────
 FROM eclipse-temurin:24-jdk-alpine AS builder
 
 WORKDIR /app
-
-# Install Maven
 RUN apk add --no-cache maven
-
-# Copy pom first — dependencies are cached unless pom.xml changes
 COPY pom.xml .
 RUN mvn dependency:go-offline -q
-
-# Copy source and build fat JAR
 COPY src ./src
 RUN mvn package -DskipTests -q
 
@@ -24,11 +13,13 @@ FROM eclipse-temurin:24-jre-alpine
 
 WORKDIR /app
 
-# Non-root user for security
-RUN addgroup -S smartcloud && adduser -S smartcloud -G smartcloud
-USER smartcloud
+# Install Docker CLI
+RUN apk add --no-cache docker-cli
 
-# Copy the fat JAR from builder
+# FIX: Run as ROOT so the backend can access /var/run/docker.sock
+# In production, use a dedicated docker group instead
+# USER smartcloud  ← removed, was causing permission denied on docker.sock
+
 COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 8082

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
@@ -7,18 +7,21 @@ import HistoryPage from './pages/HistoryPage';
 import Navbar from './components/Navbar';
 import './styles/global.css';
 
-// ProtectedRoute: redirects unauthenticated users to /login
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading-screen"><div className="loading-spinner" /></div>;
   return user ? children : <Navigate to="/login" replace />;
 };
 
-// BUG FIX: Router must wrap Navbar — original had Router inside AppRoutes which is fine,
-// but Navbar (which uses useNavigate, useLocation) MUST be inside BrowserRouter.
-// Now Navbar is inside the Router as part of AppRoutes, not outside it.
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  // Always clear session on app load — user must log in every time
+  useEffect(() => {
+    logout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Router>
       {user && <Navbar />}
@@ -30,7 +33,7 @@ function AppRoutes() {
         <Route path="/history" element={
           <ProtectedRoute><HistoryPage /></ProtectedRoute>
         } />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

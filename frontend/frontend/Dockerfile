@@ -29,7 +29,7 @@ RUN printf 'server {\n\
         try_files $uri $uri/ /index.html;\n\
     }\n\
     location /api/ {\n\
-        proxy_pass http://backend:8080;\n\
+        proxy_pass http://backend:8082;\n\
         proxy_set_header Host $host;\n\
         proxy_set_header X-Real-IP $remote_addr;\n\
     }\n\
