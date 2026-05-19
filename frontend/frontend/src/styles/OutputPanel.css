@@ -262,17 +262,19 @@
   50% { opacity: 0.5; }
 }
 
-/* AI result */
+/* AI result wrapper adjustments */
 .ai-result {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .ai-result-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
 }
 
 .ai-badge {
@@ -298,22 +300,104 @@
   border-color: var(--border-bright);
 }
 
-.ai-content {
+/* ==========================================================================
+   NEW RESTRUCTURED HIGH-READABILITY TYPOGRAPHY SYSTEM
+   ========================================================================== */
+.ai-content-clean {
+  color: var(--text-0);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.75;
+  letter-spacing: -0.05px;
+}
+
+/* Document Blocks spacing and structural alignment */
+.ai-prose-paragraph {
+  margin: 0 0 14px 0;
+  color: var(--text-1);
+}
+
+.ai-prose-spacer {
+  display: block;
+  height: 10px;
+}
+
+/* Premium Code Typography */
+.ai-code-block {
   background: var(--bg-0);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 14px;
+  padding: 12px 14px;
+  margin: 14px 0;
+  overflow-x: auto;
+}
+
+.ai-code-block code {
+  font-family: var(--font-mono), monospace;
   font-size: 12px;
-  line-height: 1.8;
+  line-height: 1.6;
+  color: #e5c07b; /* Calming syntax token fallback coloration */
+  display: block;
+}
+
+/* Micro inline formatting tags */
+.ai-inline-code {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--accent);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.ai-inline-strong {
+  font-weight: 600;
   color: var(--text-0);
 }
 
-.ai-bold    { font-weight: 700; color: var(--accent); margin: 8px 0 4px; }
-.ai-heading { font-weight: 700; color: var(--text-0); font-size: 13px; margin: 10px 0 4px; }
-.ai-numbered{ color: var(--text-1); padding-left: 4px; margin: 4px 0; }
-.ai-line    { color: var(--text-0); margin: 2px 0; }
-.ai-spacer  { height: 8px; }
-.ai-fence   { height: 1px; background: var(--border); margin: 8px 0; }
+/* Dynamic Structured Headings layout */
+.ai-doc-heading {
+  font-weight: 600;
+  color: var(--text-0);
+  margin: 22px 0 10px 0;
+  letter-spacing: -0.2px;
+  line-height: 1.4;
+}
+
+.ai-doc-heading.heading-depth-1,
+.ai-doc-heading.heading-depth-2 {
+  font-size: 15px;
+  color: var(--accent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  padding-bottom: 4px;
+}
+
+.ai-doc-heading.heading-depth-3,
+.ai-doc-heading.heading-depth-4 {
+  font-size: 13.5px;
+}
+
+/* Custom list handling layouts */
+.ai-ol-list, .ai-ul-list {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+}
+
+.ai-ol-list li, .ai-ul-list li {
+  margin-bottom: 6px;
+  color: var(--text-1);
+}
+
+.ai-ol-list li::marker {
+  color: var(--accent);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.ai-ul-list li::marker {
+  color: var(--text-2);
+}
 
 /* AI action button */
 .ai-action-btn {

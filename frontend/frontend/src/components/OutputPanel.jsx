@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import InteractiveTerminal from './InteractiveTerminal';
 import '../styles/OutputPanel.css';
 
-// OutputPanel displays: execution results, AI error explanation, AI code analysis
-const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAILoading }) => {
+const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAILoading, activeSession, onTerminalFinish, onTerminalError }) => {
   const [activeTab, setActiveTab] = useState('output');
 
   const hasError = output?.status === 'ERROR' || output?.status === 'TIMEOUT' || output?.stderr;
@@ -16,32 +16,129 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
 
   const status = output ? (statusConfig[output.status] || statusConfig.ERROR) : null;
 
-  // Render AI markdown-like text with basic formatting
-  const renderAIText = (text) => {
-    if (!text) return null;
-    return text.split('\n').map((line, i) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <div key={i} className="ai-bold">{line.slice(2, -2)}</div>;
+  // Rich inline text tokenizer to properly style code blocks, bold text, and plain prose
+  const parseInlineElements = (text, lineKey) => {
+    // Regex matches text bounded by double asterisks ** or backticks `
+    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={`${lineKey}-${index}`} className="ai-inline-strong">{part.slice(2, -2)}</strong>;
       }
-      if (line.match(/^\*\*(.+)\*\*/)) {
-        return (
-          <div key={i} className="ai-line">
-            {line.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
-              part.startsWith('**') ? <strong key={j}>{part.slice(2,-2)}</strong> : part
-            )}
-          </div>
-        );
+      if (part.startsWith('`') && part.endsWith('`')) {
+        return <code key={`${lineKey}-${index}`} className="ai-inline-code">{part.slice(1, -1)}</code>;
       }
-      if (line.startsWith('```')) return <div key={i} className="ai-fence" />;
-      if (line.match(/^\d+\./)) {
-        return <div key={i} className="ai-numbered">{line}</div>;
-      }
-      if (line.startsWith('#')) {
-        return <div key={i} className="ai-heading">{line.replace(/^#+\s*/, '')}</div>;
-      }
-      if (line === '') return <div key={i} className="ai-spacer" />;
-      return <div key={i} className="ai-line">{line}</div>;
+      return part;
     });
+  };
+
+  const renderAIText = (rawText) => {
+      if (!rawText) return null;
+
+      const lines = rawText.split('\n');
+      const elements = [];
+      let inCodeBlock = false;
+      let codeBlockLines = [];
+      let currentListType = null; // 'ul' | 'ol' | null
+      let listItems = [];
+
+      // Helper to clear list structures out safely before running block elements
+      const flushList = (key) => {
+        if (listItems.length > 0) {
+          if (currentListType === 'ol') {
+            elements.push(<ol key={`ol-${key}`} className="ai-ol-list">{listItems}</ol>);
+          } else {
+            elements.push(<ul key={`ul-${key}`} className="ai-ul-list">{listItems}</ul>);
+          }
+          listItems = [];
+          currentListType = null;
+        }
+      };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Handle multi-line fenced code blocks
+      if (line.trim().startsWith('```')) {
+        if (inCodeBlock) {
+          // Closing code fence
+          elements.push(
+            <pre key={`code-${i}`} className="ai-code-block">
+              <code>{codeBlockLines.join('\n')}</code>
+            </pre>
+          );
+          codeBlockLines = [];
+          inCodeBlock = false;
+        } else {
+          // Opening code fence
+          flushList(i);
+          inCodeBlock = true;
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeBlockLines.push(line);
+        continue;
+      }
+
+      // Handle Headings
+      if (line.startsWith('#')) {
+        flushList(i);
+        const depth = (line.match(/^#+/) || ['#'])[0].length;
+        const cleanHeading = line.replace(/^#+\s*/, '');
+        const HeadingTag = depth <= 2 ? 'h3' : 'h4'; // Maps markdown # and ## to h3, rest to h4 inside our panel
+        elements.push(
+          <HeadingTag key={`h-${i}`} className={`ai-doc-heading heading-depth-${depth}`}>
+            {parseInlineElements(cleanHeading, i)}
+          </HeadingTag>
+        );
+        continue;
+      }
+
+      // Handle Ordered Lists (e.g., 1. Item)
+      const orderedMatch = line.match(/^\s*(\d+)\.\s+(.+)/);
+      if (orderedMatch) {
+        if (currentListType !== 'ol') {
+          flushList(i);
+          currentListType = 'ol';
+        }
+        listItems.push(<li key={`li-${i}`}>{parseInlineElements(orderedMatch[2], i)}</li>);
+        continue;
+      }
+
+      // Handle Unordered Lists (e.g., * Item or - Item)
+      const unorderedMatch = line.match(/^\s*[*|-]\s+(.+)/);
+      if (unorderedMatch) {
+        if (currentListType !== 'ul') {
+          flushList(i);
+          currentListType = 'ul';
+        }
+        listItems.push(<li key={`li-${i}`}>{parseInlineElements(unorderedMatch[1], i)}</li>);
+        continue;
+      }
+
+      // Handle Empty Spacers/Newlines
+      if (line.trim() === '') {
+        flushList(i);
+        // Conditionally adds structured vertical rhythm safely without excessive breaks
+        if (elements.length > 0 && elements[elements.length - 1].type !== 'span') {
+          elements.push(<span key={`spacer-${i}`} className="ai-prose-spacer" />);
+        }
+        continue;
+      }
+
+      // Fallback: Standard Body Paragraphs
+      flushList(i);
+      elements.push(
+        <p key={`p-${i}`} className="ai-prose-paragraph">
+          {parseInlineElements(line, i)}
+        </p>
+      );
+    }
+
+    // Flush any leftover open list components
+    flushList(lines.length);
+    return elements;
   };
 
   return (
@@ -91,8 +188,16 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
 
         {/* OUTPUT TAB */}
         {activeTab === 'output' && (
-          <div className="tab-content">
-            {!output ? (
+          <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {activeSession ? (
+              <InteractiveTerminal
+                code={activeSession.code}
+                language={activeSession.language}
+                token={activeSession.token}
+                onFinish={onTerminalFinish}
+                onError={onTerminalError}
+              />
+            ) : !output ? (
               <div className="empty-state">
                 <div className="empty-icon">
                   <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -105,7 +210,6 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
               </div>
             ) : (
               <div className="result-wrap">
-                {/* Status bar */}
                 <div className={`status-bar status-${status.color}`}>
                   <span className="status-icon">{status.icon}</span>
                   <span className="status-label">{status.label}</span>
@@ -117,7 +221,6 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
                   )}
                 </div>
 
-                {/* stdout */}
                 {output.stdout && (
                   <div className="output-section">
                     <div className="section-label stdout-label">
@@ -128,7 +231,6 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
                   </div>
                 )}
 
-                {/* stderr */}
                 {output.stderr && (
                   <div className="output-section">
                     <div className="section-label stderr-label">
@@ -178,7 +280,7 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
                   <span className="ai-badge">🤖 AI Explanation</span>
                   <button className="refresh-btn" onClick={onExplain}>Refresh</button>
                 </div>
-                <div className="ai-content">{renderAIText(aiExplain)}</div>
+                <div className="ai-content-clean">{renderAIText(aiExplain)}</div>
               </div>
             ) : (
               <div className="empty-state">
@@ -208,15 +310,15 @@ const OutputPanel = ({ output, aiExplain, aiAnalysis, onExplain, onAnalyze, isAI
             ) : aiAnalysis ? (
               <div className="ai-result">
                 <div className="ai-result-header">
-                  <span className="ai-badge">📊 Code Analysis</span>
+                  <span className="ai-badge">Code Analysis</span>
                   <button className="refresh-btn" onClick={onAnalyze}>Refresh</button>
                 </div>
-                <div className="ai-content">{renderAIText(aiAnalysis)}</div>
+                <div className="ai-content-clean">{renderAIText(aiAnalysis)}</div>
               </div>
             ) : (
               <div className="empty-state">
                 <button className="ai-action-btn" onClick={onAnalyze}>
-                  📊 Analyze Code Complexity
+                  Analyze Code Complexity
                 </button>
                 <p className="empty-hint">Get Big-O complexity and optimization tips</p>
               </div>

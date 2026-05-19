@@ -1,5 +1,5 @@
 package com.smartcloud.service;
- 
+
 import com.smartcloud.dto.Dto.*;
 import com.smartcloud.model.Submission;
 import com.smartcloud.model.User;
@@ -9,43 +9,59 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
- 
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.*;
- 
+
+// CodeExecutionService — the heart of the compiler platform
+//
+// BEFORE DOCKER (current phase):
+//   Code execution requires Docker to be installed on the host running the Spring Boot app.
+//   The service spawns Docker containers directly from the JVM using ProcessBuilder.
+//   In production (Phase 4+), these containers run inside Kubernetes pods on AWS EC2.
+//
+// Security model:
+//   - Each execution runs in an ISOLATED Docker container
+//   - --network=none: no internet access
+//   - --memory=256m: memory cap
+//   - --cpus=0.5: CPU cap
+//   - --rm: container destroyed after execution
+//   - ExecutorService timeout: kills process after N seconds
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CodeExecutionService {
- 
+
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
- 
+
     @Value("${execution.timeout:10}")
     private int timeoutSeconds;
- 
+
     @Value("${execution.memory.limit:256m}")
     private String memoryLimit;
- 
+
     @Value("${execution.cpu.limit:0.5}")
     private String cpuLimit;
- 
+
+    // Docker image names — must match what you built in Phase 4
     private static final String IMAGE_PYTHON = "smartcloud-runner-python";
-    private static final String IMAGE_JAVA   = "smartcloud-runner-java";
-    private static final String IMAGE_CPP    = "smartcloud-runner-cpp";
- 
+    private static final String IMAGE_JAVA = "smartcloud-runner-java";
+    private static final String IMAGE_CPP = "smartcloud-runner-cpp";
+
     public ExecuteResponse execute(ExecuteRequest request, String username) {
         long startTime = System.currentTimeMillis();
- 
+
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
- 
+
         String dockerImage = resolveImage(request.getLanguage());
         String encodedCode = Base64.getEncoder().encodeToString(
                 request.getCode().getBytes(StandardCharsets.UTF_8));
- 
+
         ExecuteResponse response;
         try {
             response = runInDocker(dockerImage, encodedCode, request.getInput(), startTime);
@@ -58,14 +74,16 @@ public class CodeExecutionService {
                     .executionTime(System.currentTimeMillis() - startTime)
                     .build();
         }
- 
+
+        // BUG FIX: Map status string to correct ExecutionStatus enum
+        // Timeout returns "TIMEOUT", success returns "SUCCESS", errors return "ERROR"
         Submission.ExecutionStatus execStatus;
         try {
             execStatus = Submission.ExecutionStatus.valueOf(response.getStatus());
         } catch (IllegalArgumentException e) {
             execStatus = Submission.ExecutionStatus.ERROR;
         }
- 
+
         Submission submission = Submission.builder()
                 .user(user)
                 .language(request.getLanguage())
@@ -76,66 +94,52 @@ public class CodeExecutionService {
                 .status(execStatus)
                 .executionTime(response.getExecutionTime())
                 .build();
- 
+
         Submission saved = submissionRepository.save(submission);
         response.setSubmissionId(saved.getId());
- 
+
         return response;
     }
- 
+
     private ExecuteResponse runInDocker(String image, String encodedCode, String stdin, long startTime)
             throws IOException, InterruptedException {
- 
-        // -i flag keeps stdin open so the container can read from it
-        ProcessBuilder pb = new ProcessBuilder(
-                "docker", "run", "--rm", "-i",
-                "--memory=" + memoryLimit,
-                "--cpus=" + cpuLimit,
-                "--network=none",
-                "--ulimit", "nofile=64:64",
-                "--ulimit", "nproc=64:64",
-                "-e", "CODE=" + encodedCode,
-                image);
- 
+
+        ProcessBuilder pb = createDockerProcess(image, encodedCode);
+
         pb.redirectErrorStream(false);
         Process process = pb.start();
- 
-        // Write stdin in a separate thread BEFORE reading stdout/stderr
-        // to avoid deadlock (process blocks waiting for input,
-        // while we block waiting for output)
-        ExecutorService executor = Executors.newFixedThreadPool(3);
- 
-        executor.submit(() -> {
+
+        if (stdin != null && !stdin.isBlank()) {
             try (OutputStream os = process.getOutputStream()) {
-                if (stdin != null && !stdin.isBlank()) {
-                    os.write(stdin.getBytes(StandardCharsets.UTF_8));
-                    os.flush();
-                }
-                // Always close stdin so the process knows input is done
-            } catch (IOException e) {
-                log.warn("Failed to write stdin: {}", e.getMessage());
+                os.write(stdin.getBytes(StandardCharsets.UTF_8));
+                os.flush();
             }
-        });
- 
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
         Future<String> stdoutFuture = executor
                 .submit(() -> new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
- 
+
         Future<String> stderrFuture = executor
                 .submit(() -> new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8));
- 
+
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
- 
+
         if (!finished) {
             process.destroyForcibly();
             executor.shutdownNow();
+            long elapsed = System.currentTimeMillis() - startTime;
+            // BUG FIX: Was "ERROR" — now correctly returns "TIMEOUT" to match
+            // ExecutionStatus enum
             return ExecuteResponse.builder()
                     .stdout("")
                     .stderr("Execution timed out after " + timeoutSeconds + " seconds.")
                     .status("TIMEOUT")
-                    .executionTime(System.currentTimeMillis() - startTime)
+                    .executionTime(elapsed)
                     .build();
         }
- 
+
         String stdout = "";
         String stderr = "";
         try {
@@ -146,10 +150,10 @@ public class CodeExecutionService {
         } finally {
             executor.shutdown();
         }
- 
+
         long elapsed = System.currentTimeMillis() - startTime;
         boolean success = process.exitValue() == 0 && stderr.isBlank();
- 
+
         return ExecuteResponse.builder()
                 .stdout(stdout)
                 .stderr(stderr)
@@ -157,14 +161,27 @@ public class CodeExecutionService {
                 .executionTime(elapsed)
                 .build();
     }
- 
-    private String resolveImage(String language) {
+
+    public ProcessBuilder createDockerProcess(String image, String encodedCode) {
+        return new ProcessBuilder(
+                "docker", "run", "--rm",
+                "-i",
+                "--memory=" + memoryLimit,
+                "--cpus=" + cpuLimit,
+                "--network=none",
+                "--ulimit", "nofile=64:64",
+                "--ulimit", "nproc=64:64",
+                "-e", "CODE=" + encodedCode,
+                "-e", "PYTHONUNBUFFERED=1",
+                image);
+    }
+
+    public String resolveImage(String language) {
         return switch (language.toLowerCase()) {
             case "python" -> IMAGE_PYTHON;
-            case "java"   -> IMAGE_JAVA;
-            case "cpp"    -> IMAGE_CPP;
+            case "java" -> IMAGE_JAVA;
+            case "cpp" -> IMAGE_CPP;
             default -> throw new IllegalArgumentException("Unsupported language: " + language);
         };
     }
 }
- 

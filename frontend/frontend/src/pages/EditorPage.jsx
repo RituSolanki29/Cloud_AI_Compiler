@@ -1,112 +1,215 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+
 import CodeEditor from '../components/CodeEditor';
 import OutputPanel from '../components/OutputPanel';
-import { executeCode, explainError, analyzeCode } from '../api/services';
+
+import {
+  executeCode,
+  explainError,
+  analyzeCode,
+} from '../api/services';
+
 import '../styles/EditorPage.css';
 
 const DEFAULT_CODE = {
-  python: `# Write your Python code here\ndef main():\n    print("Hello from SmartCloud!")\n\nmain()`,
-  java: `// Write your Java code here\npublic class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from SmartCloud!");\n    }\n}`,
-  cpp: `// Write your C++ code here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from SmartCloud!" << endl;\n    return 0;\n}`,
+  python: `# Write your Python code here
+def main():
+    print("Hello from SmartCloud!")
+
+main()`,
+
+  java: `// Write your Java code here
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from SmartCloud!");
+    }
+}`,
+
+  cpp: `// Write your C++ code here
+#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello from SmartCloud!" << endl;
+    return 0;
+}`,
 };
 
-const EditorPage = () => {
+const EditorPage = ({ editorState, setEditorState }) => {
   const location = useLocation();
 
-  // FIX: Use a ref to track which location.state we already applied.
-  // Without this, every re-render (including navigating BACK to this page
-  // without new state) would clear the editor back to defaults.
+  // Prevent repeated history-state reapplication
   const appliedStateRef = useRef(null);
 
-  const [language, setLanguage] = useState(location.state?.language || 'python');
-  const [code, setCode]         = useState(location.state?.code     || DEFAULT_CODE.python);
-  const [stdin, setStdin]       = useState(location.state?.input    || '');
-  const [wasReopened, setWasReopened] = useState(!!location.state?.code);
+  // Persistent state from App.jsx
+  const { language, code } = editorState;
 
-  const [output,      setOutput]      = useState(null);
-  const [aiExplain,   setAiExplain]   = useState('');
-  const [aiAnalysis,  setAiAnalysis]  = useState('');
-  const [isRunning,   setIsRunning]   = useState(false);
+  // Local UI states
+  const [wasReopened, setWasReopened] = useState(
+    !!location.state?.code
+  );
+
+  const [output, setOutput] = useState(null);
+  const [aiExplain, setAiExplain] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
+  const [activeSession, setActiveSession] = useState(null);
+  
+  // Resizable panes state
+  const [rightPaneWidth, setRightPaneWidth] = useState(420);
+  const isResizing = useRef(false);
 
-  // Apply location.state ONLY when it actually changes (new navigation from History)
-  // Comparing by reference prevents wiping the editor when the user just clicks
-  // around on the same page without triggering a new navigate() call.
+  // Apply history state ONLY once per navigation
   useEffect(() => {
     if (
       location.state?.code &&
       location.state !== appliedStateRef.current
     ) {
       appliedStateRef.current = location.state;
-      setCode(location.state.code);
-      setLanguage(location.state.language || 'python');
-      setStdin(location.state.input || '');
+
+      setEditorState({
+        language: location.state.language || 'python',
+        code: location.state.code,
+      });
+
       setOutput(null);
       setAiExplain('');
       setAiAnalysis('');
       setWasReopened(true);
     }
-  }, [location.state]);
+  }, [location.state, setEditorState]);
 
+  // Update code
+  const setCode = (newCode) => {
+    setEditorState((prev) => ({
+      ...prev,
+      code: newCode,
+    }));
+  };
+
+  // Handle language switch
   const handleLanguageChange = (newLang) => {
-    setLanguage(newLang);
-    if (!wasReopened) {
-      setCode(DEFAULT_CODE[newLang]);
-    }
+    setEditorState((prev) => ({
+      ...prev,
+      language: newLang,
+      code: !wasReopened
+        ? DEFAULT_CODE[newLang]
+        : prev.code,
+    }));
+
     setWasReopened(false);
   };
 
-  const handleRun = async () => {
+  // Run code
+  const handleRun = () => {
     setIsRunning(true);
     setOutput(null);
     setAiExplain('');
     setAiAnalysis('');
 
-    try {
-      const response = await executeCode({ language, code, input: stdin });
-      setOutput(response.data);
-    } catch (err) {
-      setOutput({
-        status: 'ERROR',
-        stderr: err.response?.data?.message || 'Server error. Please try again.',
-        stdout: '',
-        executionTime: null,
-      });
-    } finally {
-      setIsRunning(false);
-    }
+    const token = localStorage.getItem('token');
+    
+    setActiveSession({
+      language,
+      code,
+      token
+    });
   };
 
+  const handleTerminalFinish = (msg) => {
+    setIsRunning(false);
+    setOutput({
+      status: msg.status,
+      executionTime: msg.executionTime,
+      stdout: '', // Printed in terminal
+      stderr: ''
+    });
+    // We leave activeSession non-null so the terminal remains visible until next run
+  };
+
+  const handleTerminalError = (err) => {
+    setIsRunning(false);
+    setOutput({
+      status: 'ERROR',
+      stderr: err || 'Terminal connection error',
+      stdout: '',
+      executionTime: null
+    });
+    setActiveSession(null);
+  };
+
+  // Explain errors
   const handleExplain = async () => {
     if (!output?.stderr) return;
+
     setIsAILoading(true);
+
     try {
-      const response = await explainError({ language, code, error: output.stderr });
+      const response = await explainError({
+        language,
+        code,
+        error: output.stderr,
+      });
+
       setAiExplain(response.data.explanation);
     } catch {
-      setAiExplain('AI service unavailable. Please try again later.');
+      setAiExplain(
+        'AI service unavailable. Please try again later.'
+      );
     } finally {
       setIsAILoading(false);
     }
   };
 
+  // Analyze code
   const handleAnalyze = async () => {
     setIsAILoading(true);
+
     try {
-      const response = await analyzeCode({ language, code });
+      const response = await analyzeCode({
+        language,
+        code,
+      });
+
       setAiAnalysis(response.data.analysis);
     } catch {
-      setAiAnalysis('AI service unavailable. Please try again later.');
+      setAiAnalysis(
+        'AI service unavailable. Please try again later.'
+      );
     } finally {
       setIsAILoading(false);
     }
+  };
+
+  // Resizing logic
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isResizing.current) return;
+    const newWidth = document.body.clientWidth - e.clientX;
+    // Set min/max boundaries
+    if (newWidth > 300 && newWidth < document.body.clientWidth - 300) {
+      setRightPaneWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
   };
 
   return (
-    <div className="editor-page">
-      {/* Left: code editor + stdin */}
-      <div className="editor-pane">
+    <div className="editor-page" style={{ cursor: isResizing.current ? 'col-resize' : 'auto' }}>
+      {/* Left Side */}
+      <div className="editor-pane" style={{ width: `calc(100% - ${rightPaneWidth}px)`, flex: 'none' }}>
         <CodeEditor
           code={code}
           setCode={setCode}
@@ -115,28 +218,16 @@ const EditorPage = () => {
           onRun={handleRun}
           isLoading={isRunning}
         />
-
-        <div className="stdin-panel">
-          <div className="stdin-header">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 6h10M6 1l5 5-5 5" stroke="var(--accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span>stdin</span>
-            <span className="stdin-hint">Program input (optional)</span>
-          </div>
-          <textarea
-            className="stdin-textarea"
-            value={stdin}
-            onChange={(e) => setStdin(e.target.value)}
-            placeholder="Enter input for your program..."
-            rows={3}
-            spellCheck={false}
-          />
-        </div>
       </div>
 
-      {/* Right: output + AI */}
-      <div className="output-pane">
+      {/* Resizer */}
+      <div 
+        className="resizer" 
+        onMouseDown={handleMouseDown}
+      />
+
+      {/* Right Side */}
+      <div className="output-pane" style={{ width: `${rightPaneWidth}px`, flex: 'none' }}>
         <OutputPanel
           output={output}
           aiExplain={aiExplain}
@@ -144,6 +235,9 @@ const EditorPage = () => {
           onExplain={handleExplain}
           onAnalyze={handleAnalyze}
           isAILoading={isAILoading}
+          activeSession={activeSession}
+          onTerminalFinish={handleTerminalFinish}
+          onTerminalError={handleTerminalError}
         />
       </div>
     </div>
