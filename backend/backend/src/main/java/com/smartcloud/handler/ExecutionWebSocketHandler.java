@@ -9,6 +9,7 @@ import com.smartcloud.repository.SubmissionRepository;
 import com.smartcloud.repository.UserRepository;
 import com.smartcloud.security.JwtUtil;
 import com.smartcloud.service.CodeExecutionService;
+import com.smartcloud.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,7 @@ public class ExecutionWebSocketHandler extends TextWebSocketHandler {
     private final UserRepository userRepository;
     private final CodeExecutionService codeExecutionService;
     private final SubmissionRepository submissionRepository;
+    private final S3Service s3Service;
 
     private final Map<String, ProcessSession> sessions = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newCachedThreadPool();
@@ -175,20 +177,33 @@ public class ExecutionWebSocketHandler extends TextWebSocketHandler {
 
     private void saveSubmission(ProcessSession ps, boolean success) {
         try {
+            String fullStdout = ps.fullOutput.toString();
             Submission submission = Submission.builder()
                     .user(ps.user)
                     .language(ps.language)
                     .code(ps.code)
                     .input("[Interactive Session]")
-                    .stdout(ps.fullOutput.toString())
+                    .stdout(truncate(fullStdout, 2000))
                     .stderr("")
                     .status(success ? Submission.ExecutionStatus.SUCCESS : Submission.ExecutionStatus.ERROR)
                     .executionTime(System.currentTimeMillis() - ps.startTime)
                     .build();
-            submissionRepository.save(submission);
+            Submission saved = submissionRepository.save(submission);
+
+            // Upload interactive output logs to Amazon S3
+            String s3Key = s3Service.uploadLogs(ps.user.getId(), saved.getId(), fullStdout, "");
+            if (s3Key != null) {
+                saved.setS3LogKey(s3Key);
+                submissionRepository.save(saved);
+            }
         } catch (Exception e) {
             log.error("Failed to save interactive submission", e);
         }
+    }
+
+    private String truncate(String str, int maxLength) {
+        if (str == null) return "";
+        return str.length() <= maxLength ? str : str.substring(0, maxLength) + "\n...[Output truncated. Full logs stored in S3]...";
     }
 
     private void sendError(WebSocketSession session, String errorMsg) throws IOException {

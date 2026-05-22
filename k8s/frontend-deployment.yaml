@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartcloud-frontend
+  labels:
+    app: smartcloud-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartcloud-frontend
+  template:
+    metadata:
+      labels:
+        app: smartcloud-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 422509705066.dkr.ecr.ap-south-1.amazonaws.com/smartcloud-frontend:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      imagePullSecrets:
+      - name: ecr-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: smartcloud-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+    nodePort: 30080
+  type: NodePort

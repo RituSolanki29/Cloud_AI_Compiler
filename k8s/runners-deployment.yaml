@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartcloud-runners
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartcloud-runners
+  template:
+    metadata:
+      labels:
+        app: smartcloud-runners
+    spec:
+      containers:
+      - name: runner-python
+        image: alpine:latest
+        command: ["sleep", "infinity"]
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

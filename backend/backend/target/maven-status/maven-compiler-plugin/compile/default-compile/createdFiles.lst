@@ -1,4 +1,5 @@
 com\smartcloud\dto\Dto$ExecuteRequest.class
+com\smartcloud\service\CloudWatchLoggingService.class
 com\smartcloud\controller\AuthController.class
 com\smartcloud\security\JwtUtil.class
 com\smartcloud\dto\Dto$ExecuteResponse.class
@@ -12,11 +13,15 @@ com\smartcloud\dto\Dto$SubmissionResponse.class
 com\smartcloud\config\GlobalExceptionHandler.class
 com\smartcloud\dto\Dto.class
 com\smartcloud\repository\UserRepository.class
+com\smartcloud\config\WebSocketConfig.class
+com\smartcloud\handler\ExecutionWebSocketHandler$ProcessSession.class
 com\smartcloud\dto\Dto$ExplainRequest.class
 com\smartcloud\controller\CodeController.class
 com\smartcloud\service\UserDetailsServiceImpl.class
+com\smartcloud\service\CloudWatchLoggingService$CustomAppender.class
 com\smartcloud\dto\Dto$ExecuteResponse$ExecuteResponseBuilder.class
 com\smartcloud\model\Submission$ExecutionStatus.class
+com\smartcloud\handler\ExecutionWebSocketHandler.class
 com\smartcloud\dto\Dto$AIResponse$AIResponseBuilder.class
 com\smartcloud\dto\Dto$UserInfo.class
 com\smartcloud\service\AIService.class
@@ -28,11 +33,15 @@ com\smartcloud\dto\Dto$AnalyzeRequest.class
 com\smartcloud\dto\Dto$LoginRequest.class
 com\smartcloud\dto\Dto$RegisterRequest.class
 com\smartcloud\model\User.class
+com\smartcloud\service\S3Service.class
+com\smartcloud\service\SystemMetricsMonitorService.class
+com\smartcloud\config\S3Config.class
 com\smartcloud\model\Submission$SubmissionBuilder.class
 com\smartcloud\dto\Dto$AuthResponse$AuthResponseBuilder.class
 com\smartcloud\dto\Dto$UserInfo$UserInfoBuilder.class
 com\smartcloud\security\JwtAuthFilter.class
 com\smartcloud\service\AuthService.class
+com\smartcloud\config\CloudWatchConfig.class
 com\smartcloud\repository\SubmissionRepository.class
 com\smartcloud\controller\AIController.class
 com\smartcloud\dto\Dto$AIResponse.class

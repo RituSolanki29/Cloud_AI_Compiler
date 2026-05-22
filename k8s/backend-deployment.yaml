@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartcloud-backend
+  labels:
+    app: smartcloud-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smartcloud-backend
+  template:
+    metadata:
+      labels:
+        app: smartcloud-backend
+    spec:
+      containers:
+      - name: backend
+        image: 422509705066.dkr.ecr.ap-south-1.amazonaws.com/smartcloud-backend:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: DB_URL
+          valueFrom:
+            secretKeyRef:
+              name: smartcloud-secrets
+              key: db-url
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: smartcloud-secrets
+              key: db-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: smartcloud-secrets
+              key: db-password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: smartcloud-secrets
+              key: jwt-secret
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: smartcloud-secrets
+              key: openai-key
+        - name: AWS_REGION
+          value: "ap-south-1"
+        - name: S3_BUCKET
+          value: "smartcloud-outputs"
+        volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run/docker.sock
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8082
+          initialDelaySeconds: 90
+          periodSeconds: 5
+          failureThreshold: 5
+      volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      imagePullSecrets:
+      - name: ecr-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: smartcloud-backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8082
+    nodePort: 30082
+  type: NodePort

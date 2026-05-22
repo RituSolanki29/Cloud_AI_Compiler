@@ -1,0 +1,32 @@
+# Hidden files and folders
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.env
+.env.*
+!.env.example
+
+# Sensitive keys and credentials
+*.pem
+*.key
+*.pub
+*.jks
+*.p12
+
+# Node/npm dependency directories and logs
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Java/Maven build output
+target/
+**/target/
+*.class
+
+# Project specific temporary and scratch files
+scratch/
+run_log.txt
+*.log

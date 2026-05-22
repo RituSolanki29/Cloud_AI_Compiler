@@ -37,6 +37,7 @@ public class CodeExecutionService {
 
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
+    private final S3Service s3Service;
 
     @Value("${execution.timeout:10}")
     private int timeoutSeconds;
@@ -89,13 +90,21 @@ public class CodeExecutionService {
                 .language(request.getLanguage())
                 .code(request.getCode())
                 .input(request.getInput())
-                .stdout(response.getStdout())
-                .stderr(response.getStderr())
+                .stdout(truncate(response.getStdout(), 2000))
+                .stderr(truncate(response.getStderr(), 2000))
                 .status(execStatus)
                 .executionTime(response.getExecutionTime())
                 .build();
 
         Submission saved = submissionRepository.save(submission);
+
+        // Upload full execution logs to Amazon S3
+        String s3Key = s3Service.uploadLogs(user.getId(), saved.getId(), response.getStdout(), response.getStderr());
+        if (s3Key != null) {
+            saved.setS3LogKey(s3Key);
+            submissionRepository.save(saved);
+        }
+
         response.setSubmissionId(saved.getId());
 
         return response;
@@ -183,5 +192,10 @@ public class CodeExecutionService {
             case "cpp" -> IMAGE_CPP;
             default -> throw new IllegalArgumentException("Unsupported language: " + language);
         };
+    }
+
+    private String truncate(String str, int maxLength) {
+        if (str == null) return "";
+        return str.length() <= maxLength ? str : str.substring(0, maxLength) + "\n...[Output truncated. Full logs stored in S3]...";
     }
 }

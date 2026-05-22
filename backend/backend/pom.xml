@@ -100,12 +100,32 @@
             <version>2.21.0</version>
         </dependency>
 
+        <!-- AWS SDK CloudWatch Logs — streams logs to CloudWatch -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>cloudwatchlogs</artifactId>
+            <version>2.21.0</version>
+        </dependency>
+
+        <!-- AWS SDK CloudWatch Metrics — publishes system metrics -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>cloudwatch</artifactId>
+            <version>2.21.0</version>
+        </dependency>
+
         <!-- H2 In-Memory Database — for local dev without PostgreSQL installed
              Switch back to PostgreSQL by updating application.properties -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Actuator for health checks -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
         <!-- Tests -->

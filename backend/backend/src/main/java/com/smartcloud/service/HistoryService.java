@@ -19,6 +19,7 @@ public class HistoryService {
 
     private final SubmissionRepository submissionRepository;
     private final UserRepository userRepository;
+    private final S3Service s3Service;
 
     public List<SubmissionResponse> getUserHistory(String username) {
         User user = getUser(username);
@@ -34,7 +35,17 @@ public class HistoryService {
                 .findByIdAndUserId(submissionId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Submission not found"));
-        return SubmissionResponse.from(submission);
+        
+        SubmissionResponse response = SubmissionResponse.from(submission);
+        
+        // If s3LogKey is present, dynamically fetch full logs from Amazon S3
+        if (submission.getS3LogKey() != null) {
+            String[] logs = s3Service.getLogs(submission.getS3LogKey());
+            response.setStdout(logs[0]);
+            response.setStderr(logs[1]);
+        }
+        
+        return response;
     }
 
     public void deleteSubmission(Long submissionId, String username) {
@@ -43,6 +54,12 @@ public class HistoryService {
                 .findByIdAndUserId(submissionId, user.getId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Submission not found"));
+        
+        // Purge log file from S3 if it exists
+        if (submission.getS3LogKey() != null) {
+            s3Service.deleteLogs(submission.getS3LogKey());
+        }
+        
         submissionRepository.delete(submission);
     }
 

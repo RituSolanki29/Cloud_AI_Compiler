@@ -123,8 +123,8 @@ const EditorPage = ({ editorState, setEditorState }) => {
     setOutput({
       status: msg.status,
       executionTime: msg.executionTime,
-      stdout: '', // Printed in terminal
-      stderr: ''
+      stdout: msg.status === 'SUCCESS' ? msg.fullOutput : '',
+      stderr: msg.status === 'ERROR' ? msg.fullOutput : msg.fullOutput || ''
     });
     // We leave activeSession non-null so the terminal remains visible until next run
   };

@@ -38,14 +38,23 @@ const InteractiveTerminal = ({ code, language, token, onFinish, onError }) => {
     window.addEventListener('resize', handleResize);
 
     // Initialize WebSocket
-    const wsUrl = process.env.REACT_APP_API_URL
-      ? process.env.REACT_APP_API_URL.replace('http', 'ws') + '/api/ws/execute'
-      : 'ws://localhost:8082/api/ws/execute';
+    const getWsUrl = () => {
+      if (process.env.REACT_APP_API_URL) {
+        return process.env.REACT_APP_API_URL.replace(/^http/, 'ws') + '/api/ws/execute';
+      }
+      if (typeof window !== 'undefined') {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}/api/ws/execute`;
+      }
+      return 'ws://localhost:8082/api/ws/execute';
+    };
+    const wsUrl = getWsUrl();
       
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     let inputBuffer = '';
+    let fullOutput = '';
 
     ws.onopen = () => {
       setStatus('Running...');
@@ -60,11 +69,12 @@ const InteractiveTerminal = ({ code, language, token, onFinish, onError }) => {
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'stdout') {
+        fullOutput += msg.data;
         // xterm expects \r\n for newlines, so we replace \n with \r\n
         terminal.write(msg.data.replace(/\r?\n/g, '\r\n'));
       } else if (msg.type === 'status') {
         setStatus(msg.status);
-        if (onFinish) onFinish(msg);
+        if (onFinish) onFinish({ ...msg, fullOutput });
       }
     };
 
