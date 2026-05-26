@@ -6,6 +6,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+*.iml
 
 # Sensitive keys and credentials
 *.pem
@@ -30,3 +31,4 @@ target/
 scratch/
 run_log.txt
 *.log
+logs/
