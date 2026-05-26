@@ -1,6 +1,8 @@
-# ⚡ SmartCloud AI Compiler
+# SmartCloud AI Compiler
 
-> A cloud-native, AI-powered code execution platform deployed on AWS with Kubernetes. Write, run, and get intelligent feedback on Python, Java, and C++ code — all from your browser.
+> A cloud-native, AI Compiler is a cloud-based online coding platform that supports multiple programming languages with secure containerized code execution.
+It provides real-time compilation and output using isolated Docker runners for better performance and security.
+The platform is built with a scalable microservices architecture using React, backend APIs, Kubernetes, AWS, and CI/CD automation.
 
 ![Status](https://img.shields.io/badge/status-live-brightgreen)
 ![AWS](https://img.shields.io/badge/cloud-AWS-FF9900?logo=amazonaws)
@@ -11,16 +13,7 @@
 
 ---
 
-## 🌐 Live Application
-
-| Environment | URL |
-|-------------|-----|
-| Production | http://13.206.82.29:30080 |
-| Domain (pending DNS) | https://smartcloud.com |
-
----
-
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -37,7 +30,7 @@
 
 ---
 
-## 🔍 Overview
+## Overview
 
 SmartCloud AI Compiler is a full-stack cloud computing project that allows users to:
 
@@ -46,25 +39,25 @@ SmartCloud AI Compiler is a full-stack cloud computing project that allows users
 - View **submission history** with execution time, status, and re-open past code
 - All executions run in **isolated Docker containers** with strict resource limits — safe from malicious code
 
-The platform is deployed on **AWS** using a real **2-node Kubernetes cluster** (kubeadm), with Amazon RDS, S3, ECR, ALB, Route 53, and CloudWatch all integrated.
+The platform is deployed on **AWS** using a real **2-node Kubernetes cluster** (kubeadm), with Amazon EC2, VPN, IAM, RDS, S3, ECR, ALB, Route 53, and CloudWatch all integrated.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
-| 🖊️ Monaco Code Editor | VS Code-quality editor with syntax highlighting |
-| ▶️ Code Execution | Run Python, Java, C++ in isolated Docker sandboxes |
-| 🤖 AI Error Explain | Groq Llama 3.3 explains errors in plain English |
-| 📊 AI Code Analyze | Big-O complexity analysis and optimization tips |
-| 📋 Submission History | View, reopen, and delete past submissions |
-| 🔐 JWT Authentication | Secure login and registration with token-based auth |
-| ☁️ Cloud Native | Deployed on AWS with Kubernetes, ECR, RDS, S3, ALB |
+| Monaco Code Editor | VS Code-quality editor with syntax highlighting |
+| Code Execution | Run Python, Java, C++ in isolated Docker sandboxes |
+| AI Error Explain | Groq Llama 3.3 explains errors in plain English |
+| AI Code Analyze | Big-O complexity analysis and optimization tips |
+| Submission History | View, reopen, and delete past submissions |
+| JWT Authentication | Secure login and registration with token-based auth |
+| Cloud Native | Deployed on AWS with Kubernetes, ECR, RDS, S3, ALB |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Browser Client (Monaco Editor / React SPA)
@@ -98,7 +91,7 @@ EC2 Master   EC2 Worker      ← Kubernetes Cluster
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 | Tool | Purpose |
@@ -139,7 +132,7 @@ EC2 Master   EC2 Worker      ← Kubernetes Cluster
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Project CC/
@@ -199,7 +192,7 @@ Project CC/
 
 ---
 
-## 🚀 Implementation Phases
+## Implementation Phases
 
 ### Phase 1 — Application Development
 - React frontend with Monaco Editor, Axios, JWT auth flow
@@ -228,7 +221,7 @@ Project CC/
 
 ---
 
-## 💻 Local Development Setup
+## Local Development Setup
 
 ### Prerequisites
 - Java 17+
@@ -286,7 +279,7 @@ App runs at:
 
 ---
 
-## ☁️ AWS Infrastructure
+## AWS Infrastructure
 
 ### Resource Summary
 
@@ -316,7 +309,7 @@ docker push <account-id>.dkr.ecr.ap-south-1.amazonaws.com/smartcloud-backend:lat
 
 ---
 
-## ☸️ Kubernetes Cluster
+## Kubernetes Cluster
 
 ### Cluster Info
 | Node | Role | IP | Version |
@@ -346,7 +339,7 @@ kubectl get services
 
 ---
 
-## 🔐 Security
+## Security
 
 ### Code Execution Sandboxing
 Every code submission runs in an isolated Docker container with:
@@ -375,7 +368,7 @@ EC2 nodes use `SmartCloud-Node-Role` with only:
 
 ---
 
-## 🔧 Environment Variables
+## Environment Variables
 
 | Variable | Description | Where Used |
 |----------|-------------|------------|
@@ -387,28 +380,12 @@ EC2 nodes use `SmartCloud-Node-Role` with only:
 
 ---
 
-## 📡 API Endpoints
+## Author
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | ❌ | Register new user |
-| POST | `/api/auth/login` | ❌ | Login, returns JWT |
-| POST | `/api/execute` | ✅ | Execute code in Docker |
-| POST | `/api/ai/explain` | ✅ | AI error explanation |
-| POST | `/api/ai/analyze` | ✅ | AI complexity analysis |
-| GET | `/api/history` | ✅ | Get all submissions |
-| GET | `/api/history/{id}` | ✅ | Get single submission |
-| DELETE | `/api/history/{id}` | ✅ | Delete submission |
-| GET | `/actuator/health` | ❌ | Health check (K8s probe) |
-
----
-
-## 👤 Author
-
-**Mahav / Ritu Solanki**
+**Ritu Solanki**
 Cloud Computing Project — SmartCloud AI Compiler
 AWS · Kubernetes · Spring Boot · React · Docker · Groq AI
 
 ---
 
-> ⭐ If you found this project helpful, give it a star on GitHub!
+> If you found this project helpful, give it a star on GitHub!
